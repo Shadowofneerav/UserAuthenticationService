@@ -8,6 +8,7 @@ import com.example.UserAuthenticationService.repos.UserRepo;
 import jakarta.persistence.Access;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -17,9 +18,12 @@ import java.util.Optional;
 public class AuthService implements IAuthService{
     @Autowired
     private UserRepo userRepo;
+
+    @Autowired
+    private BCryptPasswordEncoder bCryptPasswordEncoder;
     @Override
     public User signup(String name, String email, String password, String phoneNumber) {
-        Optional<User> user = userRepo.findByEmail(email);
+        Optional<User> user = userRepo.findByEmailId(email);
         if(user.isPresent())
         {
             throw new UserAccountAlreadyPresentException("User Account has already been present");
@@ -27,7 +31,7 @@ public class AuthService implements IAuthService{
         User saveduser = new User();
         saveduser.setName(name);
         saveduser.setEmailId(email);
-        saveduser.setPassword(password);
+        saveduser.setPassword(bCryptPasswordEncoder.encode(password));
         saveduser.setPhoneNumber(phoneNumber);
         saveduser = userRepo.save(saveduser);
         return saveduser;
@@ -35,13 +39,13 @@ public class AuthService implements IAuthService{
 
     @Override
     public User login(String email, String password) {
-        Optional<User> user = userRepo.findByEmail(email);
+        Optional<User> user = userRepo.findByEmailId(email);
         if(user.isEmpty())
         {
             throw new UserAccountNotCreatedException("User Account has not been created");
         }
         User getuser = user.get();
-        if(!getuser.getPassword().equals(password))
+        if(!bCryptPasswordEncoder.matches(password,getuser.getPassword()))
         {
             throw new InvalidCredentialsException("Invalid Credential are provided by User");
         }

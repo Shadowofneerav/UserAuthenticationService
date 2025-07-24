@@ -20,16 +20,23 @@ public class AuthController {
     @PostMapping("/signup")
     public UserDto signup(@RequestBody SignupDto sigupDto)
     {
-        return null;
+        return from(authService.signup(sigupDto.getName(),sigupDto.getEmailId(),sigupDto.getPassword(),sigupDto.getPhoneNumber()));
     }
     @PostMapping("/signin")
     public UserDto signin(@RequestBody SigninDto signinDto)
     {
-        return null;
+        return from(authService.login(signinDto.getEmailId(),signinDto.getPassword()));
     }
     @PostMapping("/validatetoken")
     public boolean validatetoken(@RequestBody ValidateTokenDto token)
     {
         return false;
+    }
+    private UserDto from(User user)
+    {
+        UserDto userDto = new UserDto();
+        userDto.setName(user.getName());
+        userDto.setEmailId(user.getEmailId());
+        return userDto;
     }
 }
