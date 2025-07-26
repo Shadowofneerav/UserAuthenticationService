@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class ValidateTokenDto {
     private String token;
-    private String userId;
+    private Long userId;
 }
