@@ -1,8 +1,12 @@
 package com.example.UserAuthenticationService.services;
 
+import com.example.UserAuthenticationService.clients.KafkaProducerClient;
+import com.example.UserAuthenticationService.dtos.EmailDto;
 import com.example.UserAuthenticationService.models.Session;
 import com.example.UserAuthenticationService.models.SessionState;
 import com.example.UserAuthenticationService.repos.SessionRepo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import org.antlr.v4.runtime.misc.Pair;
@@ -13,8 +17,10 @@ import com.example.UserAuthenticationService.models.User;
 import com.example.UserAuthenticationService.repos.UserRepo;
 import io.jsonwebtoken.Jwts;
 import jakarta.persistence.Access;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,9 +39,12 @@ public class AuthService implements IAuthService{
     private SessionRepo sessionRepo;
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
-
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private SecretKey secretKey;
+    @Autowired
+    private KafkaProducerClient kafkaProducerClient;
     @Override
     public User signup(String name, String email, String password, String phoneNumber) {
         Optional<User> user = userRepo.findByEmailId(email);
@@ -49,6 +58,17 @@ public class AuthService implements IAuthService{
         saveduser.setPassword(bCryptPasswordEncoder.encode(password));
         saveduser.setPhoneNumber(phoneNumber);
         saveduser = userRepo.save(saveduser);
+        try {
+            EmailDto emailDto = new EmailDto();
+            emailDto.setEmail(email);
+            emailDto.setSubject(saveduser.getEmailId());
+            emailDto.setMessage("Sigun Successfully Done");
+            String emailMessage = objectMapper.writeValueAsString(emailDto);
+            kafkaProducerClient.sendMessage("signup",emailMessage);
+        }
+        catch(JsonProcessingException e) {
+            throw new RuntimeException(e.getMessage());
+        }
         return saveduser;
     }
 
